@@ -74,16 +74,16 @@ list() { #{{{
 add_client_google_auth() { # {{{
 	cat /etc/openvpn/server/client-common.txt | grep -q '# USE-GOOGLE-AUTHENTICATOR' || { return; }
 	[ "X$GPASSWORD" == "X" ] && { die "Since you enabled Google Authenticator you need to call client.sh -p <password>" ; }
-	useradd -s /bin/nologin "$1"
+	useradd --shell=/bin/false --no-create-home $1
 	echo "$1:$GPASSWORD" | chpasswd
 	google-authenticator -t -d -f -r 3 -Q UTF8 -R 30 -w3 -e1  | grep 'https://www.google.com'  > ~/$1/$1_google.txt
 	echo $GPASSWORD > ~/$1/$1_pass.txt
 }
 
 # }}}
-install_google_authenticator () {#{{{
+install_google_authenticator () { #{{{
 	apt update
-	apt install libqrencode3 libpam-google-authenticator
+	apt install -y libpam-google-authenticator
 	cat /etc/group | grep -q gauth ||          { addgroup gauth; }
 	cut -d: -f1 /etc/passwd | grep -q gauth || { useradd -g gauth gauth; }
 	mkdir -p /etc/openvpn/google-authenticator
@@ -119,7 +119,7 @@ install_google_authenticator () {#{{{
 	echo "auth required $GAUTH secret=/etc/openvpn/google-authenticator/\${USER} user=gauth forward_pass" > /etc/pam.d/openvpn;
 }
 #}}}
-enable_google_authenticator() { # {{{
+enable_google_authenticator() { #{{{
 	temp=`mktemp`
 	cat /etc/openvpn/server/client-common.txt | grep -v "ns-cert-type server" | grep -v "auth-nocache" | grep -v "auth-user-pass" > $temp
 	echo "ns-cert-type	# USE-GOOGLE-AUTHENTICATOR" >> $temp 
@@ -127,6 +127,9 @@ enable_google_authenticator() { # {{{
 	echo "auth-user-pass	# USE-GOOGLE-AUTHENTICATOR" >> $temp
 	cat $temp > /etc/openvpn/server/client-common.txt
 	cat << EOF 
+
+
+
 Google Authenticator is now enabled for future clients. 
 
 To disable Google Authenticator remove these lines from 
