@@ -76,7 +76,7 @@ add_client_google_auth() { # {{{
 	[ "X$GPASSWORD" == "X" ] && { die "Since you enabled Google Authenticator you need to call client.sh -p <password>" ; }
 	useradd --shell=/bin/false --no-create-home $1
 	echo "$1:$GPASSWORD" | chpasswd
-	google-authenticator -t -d -f -r 3 -Q UTF8 -R 30 -w3 -e1  | grep 'https://www.google.com'  > ~/$1/$1_google.txt
+	google-authenticator -t -d -f -r 3 -Q UTF8 -R 30 -w3 -e1 -s /etc/openvpn/google-authenticator/$1 | grep 'https://www.google.com'  > ~/$1/$1_google.txt
 	echo $GPASSWORD > ~/$1/$1_pass.txt
 }
 
@@ -121,10 +121,10 @@ install_google_authenticator () { #{{{
 #}}}
 enable_google_authenticator() { #{{{
 	temp=`mktemp`
-	cat /etc/openvpn/server/client-common.txt | grep -v "ns-cert-type server" | grep -v "auth-nocache" | grep -v "auth-user-pass" > $temp
-	echo "ns-cert-type	# USE-GOOGLE-AUTHENTICATOR" >> $temp 
-	echo "auth-nocache	# USE-GOOGLE-AUTHENTICATOR" >> $temp 
-	echo "auth-user-pass	# USE-GOOGLE-AUTHENTICATOR" >> $temp
+	cat /etc/openvpn/server/client-common.txt | grep -v "remote-cert-tls server" | grep -v "auth-nocache" | grep -v "auth-user-pass" > $temp
+	echo "remote-cert-tls server	#USE-GOOGLE-AUTHENTICATOR" >> $temp 
+	echo "auth-nocache		# USE-GOOGLE-AUTHENTICATOR" >> $temp 
+	echo "auth-user-pass		# USE-GOOGLE-AUTHENTICATOR" >> $temp
 	cat $temp > /etc/openvpn/server/client-common.txt
 	cat << EOF 
 
@@ -135,9 +135,9 @@ Google Authenticator is now enabled for future clients.
 To disable Google Authenticator remove these lines from 
 /etc/openvpn/server/client-common.txt:
 
-ns-cert-type	# USE-GOOGLE-AUTHENTICATOR
-auth-nocache	# USE-GOOGLE-AUTHENTICATOR
-auth-user-pass	# USE-GOOGLE-AUTHENTICATOR
+remote-cert-tls server	# USE-GOOGLE-AUTHENTICATOR
+auth-nocache		# USE-GOOGLE-AUTHENTICATOR
+auth-user-pass		# USE-GOOGLE-AUTHENTICATOR
 
 EOF
 }
