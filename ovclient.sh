@@ -26,6 +26,7 @@ revoke() { #{{{
 	cp /etc/openvpn/server/easy-rsa/pki/crl.pem /etc/openvpn/server/crl.pem
 	chown nobody:"$group_name" /etc/openvpn/server/crl.pem
 	cat /etc/passwd | grep -q "^$1" && { userdel "$1"; }
+	rm "/etc/openvpn/google-authenticator/$1" 2>/dev/null
 
 	check_status $status $log 
 	echo "OK! $client revoked";
