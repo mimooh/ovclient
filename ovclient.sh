@@ -56,7 +56,7 @@ add() { #{{{
 	echo "<tls-crypt>"
 	sed -ne '/BEGIN OpenVPN Static key/,$ p' /etc/openvpn/server/tc.key
 	echo "</tls-crypt>"
-	} > ~/$client/${client}_cert.ovpn
+	} > ~/$client/${client}.ovpn
 
 	check_status $status $log 
 	add_client_google_auth $client
@@ -76,8 +76,8 @@ add_client_google_auth() { # {{{
 	[ "X$GPASSWORD" == "X" ] && { die "Since you enabled Google Authenticator you need to call client.sh -p <password>" ; }
 	useradd --shell=/bin/false --no-create-home $1
 	echo "$1:$GPASSWORD" | chpasswd
-	google-authenticator -t -d -f -r 3 -Q UTF8 -R 30 -w3 -e1 -s /etc/openvpn/google-authenticator/$1 | grep 'https://www.google.com'  > ~/$1/$1_google.txt
-	echo $GPASSWORD > ~/$1/$1_pass.txt
+	google-authenticator -t -d -f -r 3 -Q UTF8 -R 30 -w3 -e1 -s /etc/openvpn/google-authenticator/$1 | grep 'https://www.google.com'  > ~/$1/meta_$1.txt
+	echo $GPASSWORD >> ~/$1/meta_$1.txt
 }
 
 # }}}
@@ -91,15 +91,15 @@ install_google_authenticator () { #{{{
 	chmod 0700 /etc/openvpn/google-authenticator
 
 	temp=`mktemp`
-	unset PAM
+	unset PAMPLUGIN
 	unset GAUTH
 
 	[ -e "/usr/lib/openvpn/plugins/openvpn-plugin-auth-pam.so" ] && { 
-		PAM="/usr/lib/openvpn/plugins/openvpn-plugin-auth-pam.so";
+		PAMPLUGIN="/usr/lib/openvpn/plugins/openvpn-plugin-auth-pam.so";
 	}
 
 	[ -e "/usr/lib/x86_64-linux-gnu/openvpn/plugins/openvpn-plugin-auth-pam.so" ] && { 
-		PAM="/usr/lib/x86_64-linux-gnu/openvpn/plugins/openvpn-plugin-auth-pam.so";
+		PAMPLUGIN="/usr/lib/x86_64-linux-gnu/openvpn/plugins/openvpn-plugin-auth-pam.so";
 	}
 
 	[ -e "/lib/security/pam_google_authenticator.so" ] && { 
@@ -109,11 +109,11 @@ install_google_authenticator () { #{{{
 		GAUTH="/lib/x86_64-linux-gnu/security/pam_google_authenticator.so";
 	}
 
-	[ "X$PAM" == "X" ] &&   { "Stop. Cannot find /usr/lib/x86_64-linux-gnu/openvpn/plugins/openvpn-plugin-auth-pam.so"; exit; }
+	[ "X$PAMPLUGIN" == "X" ] &&   { "Stop. Cannot find /usr/lib/x86_64-linux-gnu/openvpn/plugins/openvpn-plugin-auth-pam.so"; exit; }
 	[ "X$GAUTH" == "X" ] && { "Stop. Cannot find /lib/x86_64-linux-gnu/security/pam_google_authenticator.so";  exit; }
 
-	cat /etc/openvpn/server/server.conf | grep -v "plugin $PAM openvpn" > $temp
-	echo "plugin $PAM openvpn" >> $temp
+	cat /etc/openvpn/server/server.conf | grep -v "plugin $PAMPLUGIN /etc/pam.d/openvpn" > $temp
+	echo "plugin $PAMPLUGIN /etc/pam.d/openvpn" >> $temp
 	cat $temp > /etc/openvpn/server/server.conf
 
 	echo "auth required $GAUTH secret=/etc/openvpn/google-authenticator/\${USER} user=gauth forward_pass" > /etc/pam.d/openvpn;
