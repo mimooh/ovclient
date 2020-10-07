@@ -14,34 +14,35 @@ check_status() { #{{{
 #}}}
 revoke() { #{{{
 	log=`mktemp`
-	client=`echo $1 | sed 's/\.crt$//'`
 	group_name=`groups nobody | cut -f2 -d: | cut -f2 -d' '`
 	groups nobody | grep -q " $group_name" || { die "Failed at detecting group for user 'nobody'"; }
 	cd /etc/openvpn/server/easy-rsa/
-	./easyrsa --batch revoke "$client" &>> $log
+	./easyrsa --batch revoke "$1" &>> $log
 	status+=$?;
 	EASYRSA_CRL_DAYS=3650 ./easyrsa gen-crl &>> $log
 	status+=$?;
 	rm -f /etc/openvpn/server/crl.pem
 	cp /etc/openvpn/server/easy-rsa/pki/crl.pem /etc/openvpn/server/crl.pem
 	chown nobody:"$group_name" /etc/openvpn/server/crl.pem
-	cat /etc/passwd | grep -q "^$1" && { userdel "$1"; }
+	id "$1" &>/dev/null && { userdel "$1"; }
 	rm "/etc/openvpn/google-authenticator/$1" 2>/dev/null
 
 	check_status $status $log 
-	echo "OK! $client revoked";
+	echo "OK! $1 revoked";
 }
 #}}}
 add() { #{{{
 	log=`mktemp`
-	unsanitized_client="$1"
-	client=$(sed 's/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/_/g' <<< "$unsanitized_client")
-	client=vpn_$client
+	echo 1
+	client=$(sed 's/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/_/g' <<< "$1")
+	client="vpn_$client"
 	[ -e /etc/openvpn/server/easy-rsa/pki/issued/$client.crt ] && { die "$client exists"; }
 	cd /etc/openvpn/server/easy-rsa/
 	EASYRSA_CERT_EXPIRE=3650 ./easyrsa build-client-full $client nopass &>> $log
 	status+=$?
+	sleep 1
 
+	echo 2
 	mkdir -p ~/$client
 	{
 	cat /etc/openvpn/server/client-common.txt
@@ -59,9 +60,10 @@ add() { #{{{
 	echo "</tls-crypt>"
 	} > ~/$client/${client}.ovpn
 
+	echo 3
 	check_status $status $log 
 	add_client_google_auth $client
-	echo "OK! ~/$client"
+	echo "OK! $client created"
 }
 #}}}
 list() { #{{{
