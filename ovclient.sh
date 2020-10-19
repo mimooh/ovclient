@@ -18,9 +18,11 @@ revoke() { #{{{
 	groups nobody | grep -q " $group_name" || { die "Failed at detecting group for user 'nobody'"; }
 	cd /etc/openvpn/server/easy-rsa/
 	./easyrsa --batch revoke "$1" &>> $log
+
 	status+=$?;
 	EASYRSA_CRL_DAYS=3650 ./easyrsa gen-crl &>> $log
 	status+=$?;
+	rm -f "/etc/openvpn/server/easy-rsa/pki/private/$1.key" 2>/dev/null
 	rm -f /etc/openvpn/server/crl.pem
 	cp /etc/openvpn/server/easy-rsa/pki/crl.pem /etc/openvpn/server/crl.pem
 	chown nobody:"$group_name" /etc/openvpn/server/crl.pem
@@ -33,16 +35,15 @@ revoke() { #{{{
 #}}}
 add() { #{{{
 	log=`mktemp`
-	echo 1
 	client=$(sed 's/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/_/g' <<< "$1")
 	client="vpn_$client"
 	[ -e /etc/openvpn/server/easy-rsa/pki/issued/$client.crt ] && { die "$client exists"; }
+	add_client_google_auth $client
 	cd /etc/openvpn/server/easy-rsa/
+	rm -f /etc/openvpn/server/easy-rsa/pki/private/$client.key 2>/dev/null
+
 	EASYRSA_CERT_EXPIRE=3650 ./easyrsa build-client-full $client nopass &>> $log
 	status+=$?
-	sleep 1
-
-	echo 2
 	mkdir -p ~/$client
 	{
 	cat /etc/openvpn/server/client-common.txt
@@ -60,14 +61,11 @@ add() { #{{{
 	echo "</tls-crypt>"
 	} > ~/$client/${client}.ovpn
 
-	echo 3
 	check_status $status $log 
-	add_client_google_auth $client
 	echo "OK! $client created"
 }
 #}}}
 list() { #{{{
-	echo "ls /etc/openvpn/server/easy-rsa/pki/issued/"; echo
 	ls /etc/openvpn/server/easy-rsa/pki/issued/ | grep -v 'server.crt' | while read i; do
 		echo $i | sed 's/\.crt$//'
 	done
@@ -77,6 +75,7 @@ list() { #{{{
 add_client_google_auth() { # {{{
 	cat /etc/openvpn/server/client-common.txt | grep -q '# USE-GOOGLE-AUTHENTICATOR' || { return; }
 	[ "X$GPASSWORD" == "X" ] && { die "Since you enabled Google Authenticator you need to call client.sh -p <password>" ; }
+	mkdir -p ~/$client
 	useradd --shell=/bin/false --no-create-home $1
 	echo "$1:$GPASSWORD" | chpasswd
 	google-authenticator -t -d -f -r 3 -Q UTF8 -R 30 -w3 -e1 -s /etc/openvpn/google-authenticator/$1 | grep 'https://www.google.com'  > ~/$1/meta_$1.txt
@@ -151,7 +150,7 @@ EOF
 print_help() { #{{{
 	cat << EOF
 Options:
--l          list clients
+-l          list clients (ls /etc/openvpn/server/easy-rsa/pki/issued/)
 -a <name>   add client
 -r <name>   revoke client
 -g          install and enable Google Authenticator
