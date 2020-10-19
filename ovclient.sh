@@ -23,6 +23,8 @@ revoke() { #{{{
 	EASYRSA_CRL_DAYS=3650 ./easyrsa gen-crl &>> $log
 	status+=$?;
 	rm -f "/etc/openvpn/server/easy-rsa/pki/private/$1.key" 2>/dev/null
+	rm -f "/etc/openvpn/server/easy-rsa/pki/issued/$1.crt" 2>/dev/null
+	rm -f "/etc/openvpn/server/easy-rsa/pki/reqs/$1.req" 2>/dev/null
 	rm -f /etc/openvpn/server/crl.pem
 	cp /etc/openvpn/server/easy-rsa/pki/crl.pem /etc/openvpn/server/crl.pem
 	chown nobody:"$group_name" /etc/openvpn/server/crl.pem
