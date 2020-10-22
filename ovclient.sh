@@ -77,12 +77,12 @@ list() { #{{{
 add_client_google_auth() { # {{{
 	cat /etc/openvpn/server/client-common.txt | grep -q '# USE-GOOGLE-AUTHENTICATOR' || { return; }
 	[ "X$GPASSWORD" == "X" ] && { die "Since you enabled Google Authenticator you need to call client.sh -p <password>" ; }
-	mkdir -p ~/$client
+	mkdir -p ~/$1
 	useradd --shell=/bin/false --no-create-home $1
 	echo "$1:$GPASSWORD" | chpasswd
-	google-authenticator -t -d -f -r 3 -Q UTF8 -R 30 -w3 -e1 -s /etc/openvpn/google-authenticator/$1 | grep 'https://www.google.com'  > ~/$1/meta_$1.txt
+	google-authenticator -l "$1" -t -d -f -r 3 -Q UTF8 -R 30 -w3 -e1 -s /etc/openvpn/google-authenticator/$1 | grep 'https://www.google.com'  > ~/$1/meta_$1.txt
 	chown gauth:gauth /etc/openvpn/google-authenticator/*
-	echo $GPASSWORD >> ~/$1/meta_$1.txt
+	#echo $GPASSWORD >> ~/$1/meta_$1.txt
 }
 
 # }}}
