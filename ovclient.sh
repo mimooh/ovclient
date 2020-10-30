@@ -68,9 +68,16 @@ add() { #{{{
 }
 #}}}
 list() { #{{{
-	ls /etc/openvpn/server/easy-rsa/pki/issued/ | grep -v 'server.crt' | while read i; do
-		echo $i | sed 's/\.crt$//'
-	done
+	[ "X$1" == "Xalphabet" ] && {
+		ls /etc/openvpn/server/easy-rsa/pki/issued/ | grep -v 'server.crt' | while read i; do
+			echo $i | sed 's/\.crt$//'
+		done
+	} 
+	[ "X$1" == "Xdate" ] && {
+		ls -tlh /etc/openvpn/server/easy-rsa/pki/issued/ | grep -v 'server.crt' | while read i; do
+			echo $i | sed 's/\.crt$//'
+		done
+	} 
 }
 #}}}
 
@@ -152,7 +159,8 @@ EOF
 print_help() { #{{{
 	cat << EOF
 Options:
--l          list clients (ls /etc/openvpn/server/easy-rsa/pki/issued/)
+-l          list clients by date (ls /etc/openvpn/server/easy-rsa/pki/issued/)
+-L          list clients by name
 -a <name>   add client
 -r <name>   revoke client
 -g          install and enable Google Authenticator
@@ -165,9 +173,10 @@ EOF
 
 #}}}
 # main {{{
-	while getopts "la:r:gp:vh" opt; do
+	while getopts "lLa:r:gp:vh" opt; do
 		case $opt in
-			l) list ;;
+			l) list date;;
+			L) list alphabet;;
 			a) ADDCLIENT=$OPTARG ;;
 			r) revoke $OPTARG ;;
 			g) install_google_authenticator; enable_google_authenticator ;;
