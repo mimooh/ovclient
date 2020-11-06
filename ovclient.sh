@@ -133,7 +133,8 @@ install_google_authenticator () { #{{{
 #}}}
 enable_google_authenticator() { #{{{
 	temp=`mktemp`
-	cat /etc/openvpn/server/client-common.txt | grep -v "remote-cert-tls server" | grep -v "auth-nocache" | grep -v "auth-user-pass" > $temp
+	cat /etc/openvpn/server/client-common.txt | grep -v "remote-cert-tls server" | grep -v "auth-nocache" | grep -v "auth-user-pass" | grep -v "reneg-sec" > $temp
+	echo "reneg-sec 30000  #USE-GOOGLE-AUTHENTICATOR" >> $temp 
 	echo "remote-cert-tls server	#USE-GOOGLE-AUTHENTICATOR" >> $temp 
 	echo "auth-nocache		# USE-GOOGLE-AUTHENTICATOR" >> $temp 
 	echo "auth-user-pass		# USE-GOOGLE-AUTHENTICATOR" >> $temp
