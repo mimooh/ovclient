@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 die() { #{{{
 	printf "ERROR: $1\n"; exit;
 }
@@ -46,7 +47,7 @@ add() { #{{{
 
 	EASYRSA_CERT_EXPIRE=3650 ./easyrsa build-client-full $client nopass &>> $log
 	status+=$?
-	mkdir -p ~/$client
+	mkdir -p $OVUSERHOME/$client
 	{
 	cat /etc/openvpn/server/client-common.txt
 	echo "<ca>"
@@ -61,7 +62,8 @@ add() { #{{{
 	echo "<tls-crypt>"
 	sed -ne '/BEGIN OpenVPN Static key/,$ p' /etc/openvpn/server/tc.key
 	echo "</tls-crypt>"
-	} > ~/$client/${client}.ovpn
+	} > $OVUSERHOME/$client/${client}.ovpn
+	chown -R $OVUSER $OVUSERHOME/$client
 
 	check_status $status $log 
 	echo "OK! $client created"
@@ -84,12 +86,11 @@ list() { #{{{
 add_client_google_auth() { # {{{
 	cat /etc/openvpn/server/client-common.txt | grep -q '# USE-GOOGLE-AUTHENTICATOR' || { return; }
 	[ "X$GPASSWORD" == "X" ] && { die "Since you enabled Google Authenticator you need to call client.sh -p <password>" ; }
-	mkdir -p ~/$1
+	mkdir -p $OVUSERHOME/$1
 	useradd --shell=/bin/false --no-create-home $1
 	echo "$1:$GPASSWORD" | chpasswd
-	google-authenticator -l "$1" -t -d -f -r 3 -Q UTF8 -R 30 -w3 -e1 -s /etc/openvpn/google-authenticator/$1 | grep 'https://www.google.com'  > ~/$1/meta_$1.txt
+	google-authenticator -l "$1" -t -d -f -r 3 -Q UTF8 -R 30 -w3 -e1 -s /etc/openvpn/google-authenticator/$1 | grep 'https://www.google.com'  > $OVUSERHOME/$1/meta_$1.txt
 	chown gauth:gauth /etc/openvpn/google-authenticator/*
-	#echo $GPASSWORD >> ~/$1/meta_$1.txt
 }
 
 # }}}
@@ -134,11 +135,14 @@ install_google_authenticator () { #{{{
 enable_google_authenticator() { #{{{
 	temp=`mktemp`
 	cat /etc/openvpn/server/client-common.txt | grep -v "remote-cert-tls server" | grep -v "auth-nocache" | grep -v "auth-user-pass" | grep -v "reneg-sec" > $temp
-	echo "reneg-sec 30000  #USE-GOOGLE-AUTHENTICATOR" >> $temp 
-	echo "remote-cert-tls server	#USE-GOOGLE-AUTHENTICATOR" >> $temp 
-	echo "auth-nocache		# USE-GOOGLE-AUTHENTICATOR" >> $temp 
-	echo "auth-user-pass		# USE-GOOGLE-AUTHENTICATOR" >> $temp
+	cat << EOF >> $temp
+reneg-sec 30000			# USE-GOOGLE-AUTHENTICATOR
+remote-cert-tls server	# USE-GOOGLE-AUTHENTICATOR
+auth-nocache			# USE-GOOGLE-AUTHENTICATOR
+auth-user-pass			# USE-GOOGLE-AUTHENTICATOR
+EOF
 	cat $temp > /etc/openvpn/server/client-common.txt
+
 	cat << EOF 
 
 
@@ -148,9 +152,10 @@ Google Authenticator is now enabled for future clients.
 To disable Google Authenticator remove these lines from 
 /etc/openvpn/server/client-common.txt:
 
+reneg-sec 30000			# USE-GOOGLE-AUTHENTICATOR 
 remote-cert-tls server	# USE-GOOGLE-AUTHENTICATOR
-auth-nocache		# USE-GOOGLE-AUTHENTICATOR
-auth-user-pass		# USE-GOOGLE-AUTHENTICATOR
+auth-nocache			# USE-GOOGLE-AUTHENTICATOR
+auth-user-pass			# USE-GOOGLE-AUTHENTICATOR
 
 EOF
 }
@@ -174,6 +179,8 @@ EOF
 
 #}}}
 # main {{{
+	OVUSERHOME=$( eval echo ~`logname` )
+	OVUSER=`logname`
 	while getopts "lLa:r:gp:vh" opt; do
 		case $opt in
 			l) list date;;
