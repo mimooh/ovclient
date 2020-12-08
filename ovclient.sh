@@ -179,8 +179,9 @@ EOF
 
 #}}}
 # main {{{
-	OVUSERHOME=$( eval echo ~`logname` )
-	OVUSER=`logname`
+	[ "X$SUDO_USER" != "X" ] && { OVUSER=$SUDO_USER; } || { OVUSER=$LOGNAME; }
+	OVUSERHOME=$( eval echo ~$OVUSER );
+
 	while getopts "lLa:r:gp:vh" opt; do
 		case $opt in
 			l) list date;;
