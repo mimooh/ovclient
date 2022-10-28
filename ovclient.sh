@@ -45,7 +45,7 @@ add() { #{{{
 	cd /etc/openvpn/server/easy-rsa/
 	rm -f /etc/openvpn/server/easy-rsa/pki/private/$client.key 2>/dev/null
 
-	EASYRSA_CERT_EXPIRE=3650 ./easyrsa build-client-full $client nopass &>> $log
+	EASYRSA_CERT_EXPIRE=3650 ./easyrsa --batch build-client-full $client nopass &>> $log
 	status+=$?
 	mkdir -p $OVUSERHOME/$client
 	{
