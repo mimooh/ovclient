@@ -7,5 +7,5 @@ ovclient.sh features:
 
 example:
 for i in adam matt steven; do
-	sudo bash ovclient.sh -a $i
+	sudo bash ovclient.sh -a $i; 
 done
